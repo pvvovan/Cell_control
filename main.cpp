@@ -40,13 +40,23 @@ static unsigned char EEPROM_read(unsigned int uiAddress)
 	return EEDR;
 }
 
-class storage {
-	long long counter{};
-	public:
-		void print() {
+constexpr unsigned int eeprom_addr = 19;
 
-		}
-};
+static void store_value(long long value)
+{
+	for (int i = 0; i < sizeof(value); i++) {
+		EEPROM_write(eeprom_addr + i, (value >> (i * 8)) & 0xFF);
+	}
+}
+
+static long long read_value()
+{
+	long long value{0};
+	for (int i = 0; i < sizeof(value); i++) {
+		value |= (EEPROM_read(eeprom_addr + i)) << (i * 8);
+	}
+	return value;
+}
 
 int main() {
 	uart::init(9600, 20, 20);
@@ -55,14 +65,13 @@ int main() {
 	sw_uart::init(115200, &DDRB, &PORTB, PORTB5);
 
 	for ( ; ; ) {
-		_delay_ms(500);
-		PORTB ^= 1 << PORTB5;
-		unsigned char c = EEPROM_read(0);
-		c++;
+		_delay_ms(1000);
+		long long seconds = read_value();
+		seconds++;
 		char str[20] = { '\0', };
-		snprintf(str, sizeof (str), "%d\r\n", static_cast<int>(c));
+		snprintf(str, sizeof (str), "%ld\r\n", seconds);
 		uart::print(str);
-		EEPROM_write(0, c);
+		store_value(seconds);
 	}
 
 	unsigned char data = '0';
